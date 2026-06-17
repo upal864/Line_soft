@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Times of India - Ad Line Visualizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Times of India</h1>
+            <p>Classified Ad Line Visualizer & Calculator</p>
+        </header>
+
+        <main class="grid-layout">
+            <!-- Left Panel: Input -->
+            <section class="panel input-panel">
+                <h2>Ad Matter Editor</h2>
+                
+                <div class="form-group">
+                    <label for="adTextInput">Ad Copy (Text)</label>
+                    <textarea id="adTextInput" placeholder="Enter your classified ad text here..." spellcheck="false"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="boldWordsInput">Bold Words (Comma separated)</label>
+                    <input type="text" id="boldWordsInput" placeholder="e.g. LOCATION, IMMEDIATE">
+                </div>
+
+                <div class="stats-dashboard">
+                    <div class="stat-card primary">
+                        <h3>Printed Lines</h3>
+                        <div class="stat-value" id="physicalLinesStat">0</div>
+                        <div class="stat-subtitle">Estimated physical layout</div>
+                    </div>
+                    <div class="stat-card secondary">
+                        <h3>Billed Lines</h3>
+                        <div class="stat-value" id="billedLinesStat">0</div>
+                        <div class="stat-subtitle">Based on 24 chars/line</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Newspaper Visualizer -->
+            <section class="panel visualizer-panel">
+                <h2>Newspaper Column Preview</h2>
+                <div class="newspaper-container">
+                    <!-- The exact column boundary -->
+                    <div class="column-wrapper">
+                        <div class="column-header">TOI Classifieds</div>
+                        <div id="newspaperOutput" class="newspaper-content">
+                            <!-- JS will inject the layout here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

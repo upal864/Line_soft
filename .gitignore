@@ -1,0 +1,20 @@
+# Environment variables
+.env
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+env.bak/
+venv.bak/
+
+# Logs
+*.log
+
+# Dependency directories
+node_modules/
