@@ -746,6 +746,154 @@ class NavGujaratSamayCalculator {
     }
 }
 
+class EenaduCalculator {
+    constructor() {
+        this.TOI_COLUMN_MAX_WIDTH = 1245;
+        this.RATE_PER_LINE = 22; // Typical for bilingual
+        this.charWidths = {"0":21,"1":24,"2":29,"3":22,"4":9,"5":16,"6":25,"7":32,"8":20,"9":17,"W":78,"a":32,"n":55,"t":50,"e":57,"d":60," ":49,"L":50,"b":50,"T":50,"c":64,"h":59,"i":16,"s":47,".":23,"C":55,"o":45,":":33,"D":39,"r":55,"M":80,"g":55,",":15,"B":63,"v":52,"l":15,"H":62,"p":58,"K":65,"m":61,"ఉ":65,"ద":75,"్":0,"య":60,"ో":0,"గ":40,"అ":51,"వ":56,"క":63,"ా":0,"శ":56,"ల":52,"ు":12,"ప":63,"ర":61,"మ":60,"ఖ":50,"ం":21,"ె":2,"న":63,"ీ":3,"ి":0,"స":67,"ట":63,"భ":55,"థ":55,"ఫ":51,"డ":45,"బ":55,"-":22,"ఆ":56,"(":25,"A":40,"/":55,")":34,"&":34,"త":52,"ొ":0,"ూ":8,"‌":48,"ే":8,"జ":53,"ఎ":59,"ష":60,"హ":37,"చ":70,"ణ":55,"R":64,"'":41,"f":56,"u":58,"P":60,"y":44,"F":46,"Q":33,"Y":28,"G":52,"S":52,"w":82,"V":55,"x":63,"q":55,"E":43,"I":17,"k":58,"N":51,"+":11,"ఏ":61,"ై":8};
+    }
+
+    getCharWidth(char) {
+        if (this.charWidths[char] !== undefined) {
+            return this.charWidths[char];
+        }
+        
+        const code = char.charCodeAt(0);
+        
+        // Zero/Low width Telugu modifiers fallback
+        if (['ా', 'ి', 'ీ', 'ు', 'ూ', 'ృ', 'ె', 'ే', 'ై', 'ొ', 'ో', 'ౌ', '్', 'ం', 'ః'].includes(char)) return 5;
+        
+        // Telugu base consonants fallback
+        if (code >= 0x0C00 && code <= 0x0C7F) return 60;
+        
+        // English fallback
+        if (code >= 65 && code <= 90) return 60; // Uppercase
+        if (code >= 97 && code <= 122) return 50; // Lowercase
+        return 55;
+    }
+
+    getWordPixelWidth(word, isBold = false) {
+        let width = 0;
+        for (let i = 0; i < word.length; i++) {
+            let w = this.getCharWidth(word[i]);
+            if (isBold) {
+                w = Math.floor(w * 1.2);
+            }
+            width += w;
+        }
+        return width;
+    }
+
+    calculateLayout(adText, boldWords = []) {
+        const paragraphs = adText.split('\n');
+        const finalLayout = [];
+
+        for (let p of paragraphs) {
+            if (p.trim() === '') continue;
+            const words = p.trim().split(/\s+/);
+            let currentLine = [];
+            let currentLineWidth = 0;
+            const spaceWidth = this.getCharWidth(' ');
+
+            for (let i = 0; i < words.length; i++) {
+                const word = words[i];
+                const cleanWord = word.replace(/[.,()":|-]/g, '');
+                const isBold = boldWords.includes(cleanWord) || boldWords.includes(word);
+                
+                const wordWidth = this.getWordPixelWidth(word, isBold);
+
+                if (currentLineWidth === 0) {
+                    currentLineWidth += wordWidth;
+                    currentLine.push({ text: word, isBold: isBold });
+                } 
+                else if (currentLineWidth + spaceWidth + wordWidth <= this.TOI_COLUMN_MAX_WIDTH) {
+                    currentLineWidth += spaceWidth + wordWidth;
+                    currentLine.push({ text: word, isBold: isBold });
+                } 
+                else {
+                    finalLayout.push(currentLine);
+                    currentLine = [{ text: word, isBold: isBold }];
+                    currentLineWidth = wordWidth;
+                }
+            }
+            if (currentLine.length > 0) {
+                finalLayout.push(currentLine);
+            }
+        }
+        
+        return { linesCount: finalLayout.length, layout: finalLayout };
+    }
+
+    calculateBilledLines(adText, boldWords = []) {
+        if (!adText || adText.trim() === '') return 0;
+        return this.calculateLayout(adText, boldWords).linesCount;
+    }
+}
+
+class SakshiCalculator {
+    constructor() {
+        this.TOI_COLUMN_MAX_WIDTH = 1745;
+        this.RATE_PER_LINE = 22; // Typical for regional
+        this.charWidths = {"0":31,"1":18,"2":24,"3":18,"4":44,"5":50,"6":45,"7":0,"8":23,"9":11,"ఆ":82,"ట":70,"ో":15,"మ":88,"ొ":52,"బ":34,"ై":16,"ల":19,"్":14," ":48,"ష":53,"ా":32,"ప":48,"న":33,"ం":12,"ద":82,"ు":28,"ి":24,"చ":100,"ే":17,"య":73,"క":80,"t":52,"h":68,"వ":98,"స":53,"&":53,"గ":69,"ర":66,"ె":19,"జ":26,"ీ":7,"త":51,".":5,"|":40,"O":49,"l":38,"d":49,"A":51,"u":78,"o":46,"n":79,"a":8,"g":44,"r":75,",":0,"V":50,"J":60,"I":41,"M":85,"i":28,"p":35,"s":56,"R":79,"/":63,"H":22,"N":72,"-":9,"S":80,"c":35,"b":50,"k":49,"e":59,"D":31,"P":40,"m":51,"j":74,"y":61,"w":71,"T":41,"v":91,"\"":33,"G":95,"U":23,"E":49,"L":80,"F":60,"డ":62,"హ":29,"ళ":69,"ఇ":47,"ఉ":34,"ూ":16,"ణ":83,"‌":19,"ృ":44,"ధ":31,"ఫ":86,"భ":14,":":30,"K":61,"W":87,"C":28};
+    }
+
+    getCharWidth(char) {
+        if (this.charWidths[char] !== undefined) return this.charWidths[char];
+        const code = char.charCodeAt(0);
+        if (['ా', 'ి', 'ీ', 'ు', 'ూ', 'ృ', 'ె', 'ే', 'ై', 'ొ', 'ో', 'ౌ', '్', 'ం', 'ః'].includes(char)) return 5;
+        if (code >= 0x0C00 && code <= 0x0C7F) return 60;
+        if (code >= 65 && code <= 90) return 60; 
+        if (code >= 97 && code <= 122) return 50; 
+        return 55;
+    }
+
+    getWordPixelWidth(word, isBold = false) {
+        let width = 0;
+        for (let i = 0; i < word.length; i++) {
+            let w = this.getCharWidth(word[i]);
+            if (isBold) w = Math.floor(w * 1.2);
+            width += w;
+        }
+        return width;
+    }
+
+    calculateLayout(adText, boldWords = []) {
+        const paragraphs = adText.split('\n');
+        const finalLayout = [];
+        for (let p of paragraphs) {
+            if (p.trim() === '') continue;
+            const words = p.trim().split(/\s+/);
+            let currentLine = [];
+            let currentLineWidth = 0;
+            const spaceWidth = this.getCharWidth(' ');
+            for (let i = 0; i < words.length; i++) {
+                const word = words[i];
+                const cleanWord = word.replace(/[.,()":|-]/g, '');
+                const isBold = boldWords.includes(cleanWord) || boldWords.includes(word);
+                const wordWidth = this.getWordPixelWidth(word, isBold);
+                if (currentLineWidth === 0) {
+                    currentLineWidth += wordWidth;
+                    currentLine.push({ text: word, isBold: isBold });
+                } else if (currentLineWidth + spaceWidth + wordWidth <= this.TOI_COLUMN_MAX_WIDTH) {
+                    currentLineWidth += spaceWidth + wordWidth;
+                    currentLine.push({ text: word, isBold: isBold });
+                } else {
+                    finalLayout.push(currentLine);
+                    currentLine = [{ text: word, isBold: isBold }];
+                    currentLineWidth = wordWidth;
+                }
+            }
+            if (currentLine.length > 0) finalLayout.push(currentLine);
+        }
+        return { linesCount: finalLayout.length, layout: finalLayout };
+    }
+
+    calculateBilledLines(adText, boldWords = []) {
+        if (!adText || adText.trim() === '') return 0;
+        return this.calculateLayout(adText, boldWords).linesCount;
+    }
+}
+
 // DOM Elements
 const adTextInput = document.getElementById('adTextInput');
 const boldWordsInput = document.getElementById('boldWordsInput');
@@ -767,6 +915,8 @@ function getEngine(newspaperId) {
         case 'lokmat': return new LokmatTimesCalculator();
         case 'telangana': return new TelanganaTodayCalculator();
         case 'navgujarat': return new NavGujaratSamayCalculator();
+        case 'eenadu': return new EenaduCalculator();
+        case 'sakshi': return new SakshiCalculator();
         case 'toi': 
         default: 
             return new TimesOfIndiaLineCalculator();
@@ -791,7 +941,9 @@ newspaperSelect.addEventListener('change', (e) => {
         'ht': 'HT Classifieds',
         'lokmat': 'Lokmat Times',
         'telangana': 'Telangana Today',
-        'navgujarat': 'Nav Gujarat Samay'
+        'navgujarat': 'Nav Gujarat Samay',
+        'eenadu': 'Eenadu Classifieds',
+        'sakshi': 'Sakshi Classifieds'
     };
     columnHeader.innerText = names[e.target.value];
     billedLinesSubtitle.innerText = `Based on ${engine.RATE_PER_LINE} chars/line`;
@@ -815,6 +967,12 @@ newspaperSelect.addEventListener('change', (e) => {
     } else if (e.target.value === 'navgujarat') {
         adTextInput.value = "હું, હર્ષભાઈ મેવાળા, મનોજભાઈ મેવાળાનો પુત્ર જન્મ ૦૪/૦૬/૨૦૦૩ ના રોજ ધારચોકાડી ખાતે રહેતો હતો, અને મેં (૧૦/૦૬/૨૦૨૬) ના સોગંદનામા દ્વારા (અમદાવાદ ) ખાતે મારું નામ બદલીને હર્ષ મેવાળા રાખ્યું છે.";
         boldWordsInput.value = "હું,";
+    } else if (e.target.value === 'eenadu') {
+        adTextInput.value = "ఉద్యోగ అవకాశాలు: ప్రముఖ కంపెనీకి క్రింది పోస్టుల కోసం అభ్యర్థులు కావలెను: ఫీల్డ్ బాయ్స్- 10 మంది అవసరం. ఆఫీస్ స్టాఫ్ (MBA/M.Com)-అమ్మాయిలు & అబ్బాయిలు, ట్యాలీలో కనీసం 2సంవత్సరాల అనుభవం ఉండాలి. ప్రొక్యూర్‌మెంట్ మేనేజర్. ఆసక్తి గల అభ్యర్థులు సంప్ర: 72072 74725, 98490 74725.";
+        boldWordsInput.value = "ఉద్యోగ, అవకాశాలు:";
+    } else if (e.target.value === 'sakshi') {
+        adTextInput.value = "డ్వాక్రా మహిళలకు, నిరుద్యోగులకు ఇంట్లో ఉంటూ పెట్టుబడి మీరే పెట్టుకొని పెన్సిల్స్, కొవ్వొత్తులు తయారు చేసి మాకు ఇవ్వండి వీక్లీ పేమెంట్, 9640729906";
+        boldWordsInput.value = "డ్వాక్రా, మహిళలకు,, నిరుద్యోగులకు";
     } else {
         adTextInput.value = "";
         boldWordsInput.value = "";
@@ -888,6 +1046,10 @@ function updateVisualizer() {
         newspaperOutput.style.fontFamily = "'Hind Vadodara', 'Shruti', 'Arial Unicode MS', sans-serif";
         baseFontSize = 14;
         baseWidth = 260; // Adjust physical base width to visually balance the layout logic
+    } else if (npVal === 'eenadu') {
+        newspaperOutput.style.fontFamily = "'Gautami', 'Mandali', 'NTR', 'Arial Unicode MS', sans-serif";
+        baseFontSize = 14;
+        baseWidth = 330; // Eenadu columns run slightly wider physically
     } else {
         newspaperOutput.style.fontFamily = "'Times New Roman', Times, serif";
         baseFontSize = 14;
@@ -899,7 +1061,7 @@ function updateVisualizer() {
 
     // Calculate
     const layoutData = engine.calculateLayout(text, boldWords);
-    const billedLines = engine.calculateBilledLines(text);
+    const billedLines = engine.calculateBilledLines(text, boldWords);
 
     // Update Stats
     animateValue(physicalLinesStat, parseInt(physicalLinesStat.innerText) || 0, layoutData.linesCount, 300);
