@@ -894,6 +894,349 @@ class SakshiCalculator {
     }
 }
 
+class MumbaiChouferCalculator {
+    constructor() {
+        this.TOI_COLUMN_MAX_WIDTH = 1174; 
+        this.RATE_PER_LINE = 32; 
+    }
+
+    getCharWidth(char) {
+        const exactWidths = {"े": 1, "ष": 57, "2": 45, "ी": 1, "प": 54, "ि": 0, "ु": 1, "1": 43, "-": 25, "6": 45, "+": 50, "व": 57, "G": 55, "ऊ": 56, "न": 54, "थ": 57, "ॅ": 54, "S": 54, "C": 56, "p": 46, "V": 54, "H": 56, "ग": 55, "l": 45, "ण": 56, ".": 26, "उ": 56, "घ": 52, "0": 45, "U": 56, "h": 44, "n": 42, "a": 47, "i": 45, "3": 44, "o": 46, "9": 43, "ा": 1, "ह": 56, ",": 24, "च": 58, "म": 56, "श": 55, "ड": 57, "ल": 57, "्": 0, "@": 47, "E": 57, "y": 44, "F": 56, "P": 55, "ध": 55, "ः": 0, "ठ": 56, "ब": 56, "c": 42, ")": 26, "R": 54, "ई": 54, "r": 45, "र": 56, "ो": 0, "8": 43, "5": 45, "ू": 1, "अ": 55, "(": 27, "s": 42, ":": 26, "I": 54, "द": 57, "त": 57, "b": 45, "q": 45, "फ": 56, "u": 46, "स": 55, "4": 45, "W": 54, "ं": 1, "M": 55, "य": 56, "t": 46, "/": 25, "m": 47, "ख": 56, "f": 48, "e": 44, "g": 44, " ": 12, "क": 56, "7": 43, "ज": 57, "B": 55, "d": 45, "ट": 56, "A": 54, "ळ": 56, "भ": 57};
+        
+        if (exactWidths[char] !== undefined) return exactWidths[char];
+
+        if (['ा', 'િ', 'ી', 'ु', 'ू', 'ृ', 'े', 'ै', 'ो', 'ौ', '्', 'ं', 'ः', 'ँ', '़', 'ि', 'ी'].includes(char)) return 0;
+        if (char >= '\u0900' && char <= '\u097F') return 56;
+        if (char >= '0' && char <= '9') return 45;
+        if (char >= 'A' && char <= 'Z') return 55;
+        if (char >= 'a' && char <= 'z') return 45;
+        
+        if ([' ', '.', ',', '-', ':', '/', '(', ')', '!'].includes(char)) {
+            if (char === ' ') return 12;
+            return 25;
+        }
+        
+        return 50; 
+    }
+
+    getWordPixelWidth(word, isBold = false) {
+        let width = 0;
+        for (let i = 0; i < word.length; i++) {
+            let w = this.getCharWidth(word[i]);
+            if (isBold) {
+                w = Math.floor(w * 1.2);
+            }
+            width += w;
+        }
+        return width;
+    }
+
+    calculateLayout(adText, boldWords = []) {
+        if (!adText || adText.trim() === '') return { linesCount: 0, layout: [] };
+        
+        adText = adText.replace(/\r\n/g, '\n').replace(/([^\n])\n([^\n])/g, '$1 $2');
+        const paragraphs = adText.split(/\n+/);
+        const finalLayout = [];
+
+        for (let p of paragraphs) {
+            if (p.trim() === '') continue;
+            const rawWords = p.split(' ');
+            const tokens = [];
+            
+            for (let w of rawWords) {
+                if (w.trim() === '') continue;
+                
+                let parts = [];
+                let current = "";
+                for (let i = 0; i < w.length; i++) {
+                    current += w[i];
+                    if ((w[i] === '-' || w[i] === '/') && i < w.length - 1) {
+                        parts.push({ text: current, hasPrecedingSpace: parts.length === 0, orig: w });
+                        current = "";
+                    } else if (w[i] === '.' && i < w.length - 1) {
+                        if (w[i+1].match(/[a-zA-Z0-9\u0900-\u097F]/)) {
+                            parts.push({ text: current, hasPrecedingSpace: parts.length === 0, orig: w });
+                            current = "";
+                        }
+                    }
+                }
+                if (current) {
+                    parts.push({ text: current, hasPrecedingSpace: parts.length === 0, orig: w });
+                }
+                parts.forEach(p => tokens.push(p));
+            }
+
+            let currentLine = [];
+            let currentLineWidth = 0;
+            const spaceWidth = this.getCharWidth(' ');
+
+            for (let t of tokens) {
+                const word = t.text;
+                const cleanWord = t.orig.replace(/[.,()":|+&@\/-]/g, '');
+                const isBold = boldWords.includes(cleanWord) || boldWords.includes(t.orig);
+                
+                const wordWidth = this.getWordPixelWidth(word, isBold);
+                const spacing = t.hasPrecedingSpace ? spaceWidth : 0;
+
+                if (currentLineWidth === 0) {
+                    currentLineWidth += wordWidth;
+                    currentLine.push({ text: word, isBold: isBold, hasPrecedingSpace: t.hasPrecedingSpace });
+                } 
+                else if (currentLineWidth + spacing + wordWidth <= this.TOI_COLUMN_MAX_WIDTH) {
+                    currentLineWidth += spacing + wordWidth;
+                    currentLine.push({ text: word, isBold: isBold, hasPrecedingSpace: t.hasPrecedingSpace });
+                } 
+                else {
+                    finalLayout.push(currentLine);
+                    currentLine = [{ text: word, isBold: isBold, hasPrecedingSpace: t.hasPrecedingSpace }];
+                    currentLineWidth = wordWidth;
+                }
+            }
+            if (currentLine.length > 0) {
+                finalLayout.push(currentLine);
+            }
+        }
+        
+        return { linesCount: finalLayout.length, layout: finalLayout };
+    }
+
+    calculateBilledLines(adText) {
+        if (!adText || adText.trim() === '') return 0;
+        return Math.ceil(adText.length / this.RATE_PER_LINE);
+    }
+}
+
+class PunyaNagariCalculator {
+    constructor() {
+        this.TOI_COLUMN_MAX_WIDTH = 1191; 
+        this.RATE_PER_LINE = 32; 
+    }
+
+    getCharWidth(char) {
+        const exactWidths = {"झ": 58, "ु": 0, "फ": 57, "ख": 57, "य": 52, "ऊ": 56, "घ": 56, "/": 27, "ह": 54, "1": 46, "0": 43, "े": 1, "र": 54, "श": 57, "ठ": 56, "ज": 54, "\"": 23, " ": 16, "थ": 56, "ी": 0, "8": 49, "म": 58, "ल": 58, "ि": 1, "प": 56, "ण": 53, "ब": 59, "9": 48, "क": 56, "अ": 56, ")": 28, "4": 47, "त": 56, "3": 45, "ग": 56, "ट": 52, "5": 48, "E": 55, "P": 55, "भ": 57, "ष": 55, "6": 42, "व": 60, "आ": 55, "ू": 0, "ड": 56, "ॅ": 55, "-": 27, "7": 44, "ं": 0, "द": 59, "T": 57, "2": 48, "W": 55, "(": 24, ":": 25, ".": 21, "च": 58, "ॉ": 56, "्": 1, "ध": 56, ",": 22, "स": 53, "ा": 1, "ो": 1, "S": 55, "न": 56};
+        
+        if (exactWidths[char] !== undefined) return exactWidths[char];
+
+        if (['ा', 'િ', 'ી', 'ु', 'ू', 'ृ', 'े', 'ै', 'ो', 'ौ', '्', 'ं', 'ः', 'ँ', '़', 'ि', 'ी'].includes(char)) return 0;
+        if (char >= '\u0900' && char <= '\u097F') return 56;
+        if (char >= '0' && char <= '9') return 45;
+        if (char >= 'A' && char <= 'Z') return 55;
+        if (char >= 'a' && char <= 'z') return 45;
+        
+        if ([' ', '.', ',', '-', ':', '/', '(', ')', '!'].includes(char)) {
+            if (char === ' ') return 16;
+            return 25;
+        }
+        
+        return 50; 
+    }
+
+    getWordPixelWidth(word, isBold = false) {
+        let width = 0;
+        for (let i = 0; i < word.length; i++) {
+            let w = this.getCharWidth(word[i]);
+            if (isBold) {
+                w = Math.floor(w * 1.2);
+            }
+            width += w;
+        }
+        return width;
+    }
+
+    calculateLayout(adText, boldWords = []) {
+        if (!adText || adText.trim() === '') return { linesCount: 0, layout: [] };
+        
+        adText = adText.replace(/\r\n/g, '\n').replace(/([^\n])\n([^\n])/g, '$1 $2');
+        const paragraphs = adText.split(/\n+/);
+        const finalLayout = [];
+
+        for (let p of paragraphs) {
+            if (p.trim() === '') continue;
+            const rawWords = p.split(' ');
+            const tokens = [];
+            
+            for (let w of rawWords) {
+                if (w.trim() === '') continue;
+                
+                let parts = [];
+                let current = "";
+                for (let i = 0; i < w.length; i++) {
+                    current += w[i];
+                    if ((w[i] === '-' || w[i] === '/') && i < w.length - 1) {
+                        parts.push({ text: current, hasPrecedingSpace: parts.length === 0, orig: w });
+                        current = "";
+                    } else if (w[i] === '.' && i < w.length - 1) {
+                        if (w[i+1].match(/[a-zA-Z0-9\u0900-\u097F]/)) {
+                            parts.push({ text: current, hasPrecedingSpace: parts.length === 0, orig: w });
+                            current = "";
+                        }
+                    }
+                }
+                if (current) {
+                    parts.push({ text: current, hasPrecedingSpace: parts.length === 0, orig: w });
+                }
+                parts.forEach(p => tokens.push(p));
+            }
+
+            let currentLine = [];
+            let currentLineWidth = 0;
+            const spaceWidth = this.getCharWidth(' ');
+
+            for (let t of tokens) {
+                const word = t.text;
+                const cleanWord = t.orig.replace(/[.,()":|+&@\/-]/g, '');
+                const isBold = boldWords.includes(cleanWord) || boldWords.includes(t.orig);
+                
+                const wordWidth = this.getWordPixelWidth(word, isBold);
+                const spacing = t.hasPrecedingSpace ? spaceWidth : 0;
+
+                if (currentLineWidth === 0) {
+                    currentLineWidth += wordWidth;
+                    currentLine.push({ text: word, isBold: isBold, hasPrecedingSpace: t.hasPrecedingSpace });
+                } 
+                else if (currentLineWidth + spacing + wordWidth <= this.TOI_COLUMN_MAX_WIDTH) {
+                    currentLineWidth += spacing + wordWidth;
+                    currentLine.push({ text: word, isBold: isBold, hasPrecedingSpace: t.hasPrecedingSpace });
+                } 
+                else {
+                    finalLayout.push(currentLine);
+                    currentLine = [{ text: word, isBold: isBold, hasPrecedingSpace: t.hasPrecedingSpace }];
+                    currentLineWidth = wordWidth;
+                }
+            }
+            if (currentLine.length > 0) {
+                finalLayout.push(currentLine);
+            }
+        }
+        
+        return { linesCount: finalLayout.length, layout: finalLayout };
+    }
+
+    calculateBilledLines(adText) {
+        if (!adText || adText.trim() === '') return 0;
+        return Math.ceil(adText.length / this.RATE_PER_LINE);
+    }
+}
+
+class YashobhumiCalculator {
+    constructor() {
+        this.TOI_COLUMN_MAX_WIDTH = 1174; // Found via genetic optimization of actual print samples
+        this.RATE_PER_LINE = 32; 
+    }
+
+    getCharWidth(char) {
+        // Precise physical widths derived from mathematical optimization of print samples
+        const exactWidths = {"L": 56, "/": 23, "आ": 55, "ज": 56, "न": 56, "द": 53, "D": 54, "P": 55, "ा": 0, "T": 53, "र": 53, "ण": 57, ",": 26, "ट": 58, " ": 15, "थ": 56, "ऊ": 56, "्": 1, "I": 54, "व": 55, "ष": 54, "1": 44, "6": 46, "ग": 57, "ध": 57, "ो": 0, "उ": 55, "ई": 57, "प": 56, "ं": 2, "5": 45, ".": 25, "(": 25, "म": 57, ")": 28, "3": 44, "C": 55, "7": 47, "ड": 54, "ू": 0, "2": 47, "0": 42, "ी": 0, "इ": 53, "भ": 55, "ठ": 55, "घ": 56, "ल": 54, "9": 45, "8": 46, "ि": 1, "+": 50, "छ": 56, "ए": 59, "ब": 55, "े": 0, "4": 46, "-": 22, "ै": 2, "य": 56, "B": 55, "क": 54, "स": 57, "ौ": 0, "ु": 1, "।": 53, "S": 54, "श": 55, "ॉ": 54, "अ": 58, ":": 25, "त": 56, "ह": 58, "च": 53};
+        
+        if (exactWidths[char] !== undefined) return exactWidths[char];
+
+        // Fallbacks for unseen characters
+        if (['ा', 'િ', 'ી', 'ु', 'ू', 'ृ', 'े', 'ै', 'ो', 'ौ', '्', 'ं', 'ः', 'ँ', '़', 'ि', 'ी'].includes(char)) {
+            return 0; // Modifiers
+        }
+        if (char >= '\u0900' && char <= '\u097F') return 56;
+        if (char >= '0' && char <= '9') return 45;
+        if (char >= 'A' && char <= 'Z') return 55;
+        if (char >= 'a' && char <= 'z') return 45;
+        
+        if ([' ', '.', ',', '-', ':', '/', '(', ')', '!'].includes(char)) {
+            if (char === ' ') return 15;
+            return 25;
+        }
+        
+        return 50; 
+    }
+
+    getWordPixelWidth(word, isBold = false) {
+        let width = 0;
+        for (let i = 0; i < word.length; i++) {
+            let w = this.getCharWidth(word[i]);
+            if (isBold) {
+                w = Math.floor(w * 1.2);
+            }
+            width += w;
+        }
+        return width;
+    }
+
+    calculateLayout(adText, boldWords = []) {
+        if (!adText || adText.trim() === '') return { linesCount: 0, layout: [] };
+        
+        // Clean up accidental single newlines from copy-pasting, preserving intentional double newlines
+        adText = adText.replace(/\r\n/g, '\n').replace(/([^\n])\n([^\n])/g, '$1 $2');
+        
+        const paragraphs = adText.split(/\n+/);
+        const finalLayout = [];
+
+        for (let p of paragraphs) {
+            if (p.trim() === '') continue;
+            const rawWords = p.split(' ');
+            const tokens = [];
+            
+            // Hyphenation and punctuation splitting logic
+            for (let w of rawWords) {
+                if (w.trim() === '') continue;
+                
+                let parts = [];
+                let current = "";
+                for (let i = 0; i < w.length; i++) {
+                    current += w[i];
+                    if ((w[i] === '-' || w[i] === '/') && i < w.length - 1) {
+                        parts.push({ text: current, hasPrecedingSpace: parts.length === 0 });
+                        current = "";
+                    } else if (w[i] === '.' && i < w.length - 1) {
+                        if (w[i+1].match(/[a-zA-Z0-9\u0900-\u097F]/)) {
+                            parts.push({ text: current, hasPrecedingSpace: parts.length === 0 });
+                            current = "";
+                        }
+                    }
+                }
+                if (current) {
+                    parts.push({ text: current, hasPrecedingSpace: parts.length === 0 });
+                }
+                parts.forEach(p => tokens.push(p));
+            }
+
+            let currentLine = [];
+            let currentLineWidth = 0;
+            const spaceWidth = this.getCharWidth(' ');
+
+            for (let t of tokens) {
+                const word = t.text;
+                const cleanWord = word.replace(/[.,()":|+&@\/-]/g, '');
+                const isBold = boldWords.includes(cleanWord) || boldWords.includes(word);
+                
+                const wordWidth = this.getWordPixelWidth(word, isBold);
+                const spacing = t.hasPrecedingSpace ? spaceWidth : 0;
+
+                if (currentLineWidth === 0) {
+                    currentLineWidth += wordWidth;
+                    currentLine.push({ text: word, isBold: isBold, hasPrecedingSpace: t.hasPrecedingSpace });
+                } 
+                else if (currentLineWidth + spacing + wordWidth <= this.TOI_COLUMN_MAX_WIDTH) {
+                    currentLineWidth += spacing + wordWidth;
+                    currentLine.push({ text: word, isBold: isBold, hasPrecedingSpace: t.hasPrecedingSpace });
+                } 
+                else {
+                    finalLayout.push(currentLine);
+                    currentLine = [{ text: word, isBold: isBold, hasPrecedingSpace: t.hasPrecedingSpace }];
+                    currentLineWidth = wordWidth;
+                }
+            }
+            if (currentLine.length > 0) {
+                finalLayout.push(currentLine);
+            }
+        }
+        
+        return { linesCount: finalLayout.length, layout: finalLayout };
+    }
+
+    calculateBilledLines(adText) {
+        if (!adText || adText.trim() === '') return 0;
+        return Math.ceil(adText.length / this.RATE_PER_LINE);
+    }
+}
+
 // DOM Elements
 const adTextInput = document.getElementById('adTextInput');
 const boldWordsInput = document.getElementById('boldWordsInput');
@@ -917,6 +1260,9 @@ function getEngine(newspaperId) {
         case 'navgujarat': return new NavGujaratSamayCalculator();
         case 'eenadu': return new EenaduCalculator();
         case 'sakshi': return new SakshiCalculator();
+        case 'yashobhumi': return new YashobhumiCalculator();
+        case 'mumbaichoufer': return new MumbaiChouferCalculator();
+        case 'punyanagari': return new PunyaNagariCalculator();
         case 'toi': 
         default: 
             return new TimesOfIndiaLineCalculator();
@@ -943,7 +1289,10 @@ newspaperSelect.addEventListener('change', (e) => {
         'telangana': 'Telangana Today',
         'navgujarat': 'Nav Gujarat Samay',
         'eenadu': 'Eenadu Classifieds',
-        'sakshi': 'Sakshi Classifieds'
+        'sakshi': 'Sakshi Classifieds',
+        'yashobhumi': 'Yashobhumi Classifieds',
+        'mumbaichoufer': 'Mumbai Choufer Classifieds',
+        'punyanagari': 'Punya Nagari Classifieds'
     };
     columnHeader.innerText = names[e.target.value];
     billedLinesSubtitle.innerText = `Based on ${engine.RATE_PER_LINE} chars/line`;
@@ -973,6 +1322,15 @@ newspaperSelect.addEventListener('change', (e) => {
     } else if (e.target.value === 'sakshi') {
         adTextInput.value = "డ్వాక్రా మహిళలకు, నిరుద్యోగులకు ఇంట్లో ఉంటూ పెట్టుబడి మీరే పెట్టుకొని పెన్సిల్స్, కొవ్వొత్తులు తయారు చేసి మాకు ఇవ్వండి వీక్లీ పేమెంట్, 9640729906";
         boldWordsInput.value = "డ్వాక్రా, మహిళలకు,, నిరుద్యోగులకు";
+    } else if (e.target.value === 'yashobhumi') {
+        adTextInput.value = "भिवंडीमें नामांकित ट्रान्सपोर्ट कं. के लिए लोडींग अनलोडींग क्लर्क एवं डिलिव्हरी बॉईज - तथा LPT -407-1109 केलिए ड्राइवर चाहिए। मो : 9324606851, 9324606650";
+        boldWordsInput.value = "";
+    } else if (e.target.value === 'mumbaichoufer') {
+        adTextInput.value = "भांडुप येथे सफाईसाठी स्त्री/पुरूष पाहिजे. 12000/-, 1ला माळा, B विंग, तारामोती अपार्टमेंट, शिवाई शाळेजवळ, नाहूर (पूर्व) 7021704637";
+        boldWordsInput.value = "";
+    } else if (e.target.value === 'punyanagari') {
+        adTextInput.value = 'माझे जुने नाव "रुबीना झाकीर" असे होते. माझे नवीन नाव "रुबीना झाकीर शेख" असे असून ते माझ्या अद्ययावत कागदपत्रांनुसार आहे. सदर नावाबदलाची नोंद नोटरी, क्र. 1280/26, दिनांक 09/06/2026 अन्वये करण्यात आलेली आहे.';
+        boldWordsInput.value = "माझे";
     } else {
         adTextInput.value = "";
         boldWordsInput.value = "";
@@ -1050,6 +1408,18 @@ function updateVisualizer() {
         newspaperOutput.style.fontFamily = "'Gautami', 'Mandali', 'NTR', 'Arial Unicode MS', sans-serif";
         baseFontSize = 14;
         baseWidth = 330; // Eenadu columns run slightly wider physically
+    } else if (npVal === 'yashobhumi') {
+        newspaperOutput.style.fontFamily = "'Mangal', 'Arial Unicode MS', sans-serif";
+        baseFontSize = 14;
+        baseWidth = 260; // Match Hindi ad sizing
+    } else if (npVal === 'mumbaichoufer') {
+        newspaperOutput.style.fontFamily = "'Mangal', 'Arial Unicode MS', sans-serif";
+        baseFontSize = 14;
+        baseWidth = 260; 
+    } else if (npVal === 'punyanagari') {
+        newspaperOutput.style.fontFamily = "'Mangal', 'Arial Unicode MS', sans-serif";
+        baseFontSize = 14;
+        baseWidth = 265; 
     } else {
         newspaperOutput.style.fontFamily = "'Times New Roman', Times, serif";
         baseFontSize = 14;
