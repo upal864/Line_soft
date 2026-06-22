@@ -89,7 +89,7 @@ class TimesOfIndiaLineCalculator {
 
 class TheHinduCalculator {
     constructor() {
-        this.TOI_COLUMN_MAX_WIDTH = 1470; // Optimized column limit for The Hindu
+        this.TOI_COLUMN_MAX_WIDTH = 1300; // Optimized column limit for The Hindu
         this.RATE_PER_LINE = 35; // The Hindu bills per 35 chars roughly
 
         this.base_widths = {
@@ -415,8 +415,10 @@ class MirrorCalculator {
         
         const caps = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         for(let c of caps) {
-            if (!this.base_widths[c]) {
-                this.base_widths[c] = 65;
+            if (this.base_widths[c]) {
+                this.base_widths[c] = Math.floor(this.base_widths[c] * 0.9);
+            } else {
+                this.base_widths[c] = 64; // Math.floor(72 * 0.9)
             }
         }
         const digits = '0123456789';
@@ -617,6 +619,13 @@ class IndianExpressCalculator {
     calculateBilledLines(adText) {
         if (!adText || adText.trim() === '') return 0;
         return Math.ceil(adText.length / this.RATE_PER_LINE);
+    }
+}
+
+class IndianExpressNorthCalculator extends IndianExpressCalculator {
+    constructor() {
+        super();
+        this.TOI_COLUMN_MAX_WIDTH = 1400;
     }
 }
 
@@ -1117,6 +1126,7 @@ function getEngine(newspaperId) {
         case 'et': return new EconomicTimesCalculator();
         case 'mirror': return new MirrorCalculator();
         case 'ie': return new IndianExpressCalculator();
+        case 'ie_north': return new IndianExpressNorthCalculator();
         case 'mt': return new MaharashtraTimesCalculator();
         case 'lokmat': return new LokmatTimesCalculator();
         case 'telangana': return new TelanganaTodayCalculator();
@@ -1145,7 +1155,8 @@ newspaperSelect.addEventListener('change', (e) => {
         'mirror': 'Mirror Classifieds',
         'hindu': 'The Hindu Classifieds',
         'ht': 'HT Classifieds',
-        'ie': 'The Indian Express',
+        'ie': 'The Indian Express (Gujarat/Narrow)',
+        'ie_north': 'The Indian Express (Delhi/North)',
         'lokmat': 'Lokmat Times',
         'telangana': 'Telangana Today',
         'navgujarat': 'Nav Gujarat Samay',
@@ -1162,6 +1173,7 @@ newspaperSelect.addEventListener('change', (e) => {
         'hindu': '#3b82f6',   // Blue
         'ht': '#0ea5e9',      // Light Blue
         'ie': '#dc2626',      // Strong Red
+        'ie_north': '#dc2626', // Strong Red
         'lokmat': '#0284c7',  // Blue-cyan
         'telangana': '#0891b2', // Cyan
         'navgujarat': '#ea580c', // Gujarati Orange
@@ -1199,6 +1211,10 @@ newspaperSelect.addEventListener('change', (e) => {
         newspaperOutput.style.fontFamily = "'Arial', Helvetica, sans-serif";
         newspaperOutput.style.fontSize = "12.5px";
         columnWrapper.style.width = "250px"; 
+    } else if (e.target.value === 'ie_north') {
+        newspaperOutput.style.fontFamily = "'Arial', Helvetica, sans-serif";
+        newspaperOutput.style.fontSize = "12.5px";
+        columnWrapper.style.width = "360px"; 
     } else if (e.target.value === 'ht') {
         newspaperOutput.style.fontFamily = "'Arial Narrow', 'Roboto Condensed', 'Franklin Gothic Medium Cond', sans-serif";
         newspaperOutput.style.fontSize = "13px"; 
@@ -1267,6 +1283,12 @@ newspaperSelect.addEventListener('change', (e) => {
     } else if (e.target.value === 'sakshi') {
         adTextInput.value = "డ్వాక్రా మహిళలకు, నిరుద్యోగులకు ఇంట్లో ఉంటూ పెట్టుబడి మీరే పెట్టుకొని పెన్సిల్స్, కొవ్వొత్తులు తయారు చేసి మాకు ఇవ్వండి వీక్లీ పేమెంట్, 9640729906";
         boldWordsInput.value = "డ్వాక్రా, మహిళలకు,, నిరుద్యోగులకు";
+    } else if (e.target.value === 'ie_north') {
+        adTextInput.value = "I DEEPCHAND FATHER OF SUSHIL KUMAR R/O VPO - KIDHWANA, TEHSIL - SURAJGARH, DIST- JHUNJHUNU, RAJ-333026 HAVE CHANGED MY NAME FROM DEEP CHAND TO DEEPCHAND VIDE AFFIDAVIT IN- DL34970839826403Y DATED 17/06/2026. 0050291657-1";
+        boldWordsInput.value = "";
+    } else if (e.target.value === 'ie') {
+        adTextInput.value = "I, MADHU WIFE OF NO 14292180L EX-NK PATEL DHANJILAL KARASHANDAS RESIDENCE AT VILL-KAMALPUR TEH-PRANTIJ DISTT-SABARKANTHA-383205 HAVE CHANGED MY NAME FROM MADHU TO PATEL MADHUBEN DHANJIBHAI BEFORE CLASS-I MAGISTRATE";
+        boldWordsInput.value = "I,, MADHU";
     } else {
         adTextInput.value = "";
         boldWordsInput.value = "";
@@ -1325,7 +1347,7 @@ function updateVisualizer() {
 function renderLayout(lines) {
     newspaperOutput.innerHTML = '';
     
-    const isRaggedRight = (engine instanceof HindustanTimesCalculator);
+    const isRaggedRight = (engine instanceof HindustanTimesCalculator) || (engine instanceof IndianExpressCalculator) || (engine instanceof IndianExpressNorthCalculator);
     
     lines.forEach((lineArray, lineIdx) => {
         const lineDiv = document.createElement('div');
