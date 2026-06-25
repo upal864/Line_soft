@@ -3,10 +3,51 @@
  * Ported for frontend visualization
  */
 
+
+/**
+ * Isolated Word Calculator Engine
+ */
+function calculateWordBilledUnits(text) {
+    if (!text || text.trim() === '') return 0;
+    
+    let processedText = text;
+    
+    // 1. Handle abbreviations with spaces (e.g., "B. D. A." -> "B.D.A.")
+    processedText = processedText.replace(/([A-Za-z])\.\s+(?=[A-Za-z]\.)/g, '$1.');
+    
+    // 2. Handle dates formatted with dots (e.g., 10.05.2026 -> 10 05 2026)
+    // Dates formatted with slashes or hyphens are automatically split below.
+    processedText = processedText.replace(/\b(\d{1,2})\.(\d{1,2})\.(\d{2,4})\b/g, '$1 $2 $3');
+    
+    // Comma acts as a delimiter (forces split)
+    processedText = processedText.replace(/,/g, ' ');
+
+    // Replace slashes and hyphens with spaces to split them
+    processedText = processedText.replace(/[\/\-]/g, ' '); 
+    processedText = processedText.replace(/\s+/g, ' ').trim();
+    
+    const words = processedText.split(' ');
+    let wordCount = 0;
+
+    for (let word of words) {
+        // Strip basic punctuation attached to word boundaries
+        const cleanWord = word.replace(/^[.,;:!?()]+|[.,;:!?()]+$/g, '');
+        if (cleanWord.length === 0) continue;
+        
+        // 3. Phone number detection (10 to 13 digits, optional +)
+        if (/^[+]?[0-9]{10,13}$/.test(cleanWord)) {
+            wordCount += 2; // Phone numbers count as 2 words
+        } else {
+            wordCount += 1;
+        }
+    }
+    return wordCount;
+}
+
 class TimesOfIndiaLineCalculator {
     constructor() {
-        this.TOI_COLUMN_MAX_WIDTH = 1380; // Optimized TOI column max width
-        this.charWidths = {"0":45,"1":45,"2":45,"3":45,"4":45,"5":45,"6":45,"7":45,"8":45,"9":45,"a":50,"b":55,"c":55,"d":50,"e":50,"f":28,"g":55,"h":55,"i":25,"j":22,"k":55,"m":83,"n":50,"o":60,"p":60,"q":55,"r":40,"s":55,"u":60,"v":55,"w":72,"x":55,"y":55,"z":55,"l":22,"t":28,"A":72,"B":71,"C":72,"D":72,"E":72,"F":72,"G":72,"H":72,"J":72,"K":73,"L":72,"M":83,"N":72,"O":72,"P":72,"Q":72,"R":72,"S":72,"T":72,"U":72,"V":72,"X":72,"Y":72,"Z":72,"I":33,"W":94," ":28,".":28,",":28,"-":33,"*":39,"&":66,"(":37,")":34,"=":55,"+":55,"/":28,"|":28,"@":100,":":28,"\"":30};
+        this.TOI_COLUMN_MAX_WIDTH = 1400; // Optimized TOI column max width
+        this.charWidths = {"0":45,"1":45,"2":45,"3":45,"4":45,"5":45,"6":45,"7":45,"8":45,"9":45,"a":50,"b":55,"c":55,"d":50,"e":50,"f":28,"g":55,"h":55,"i":25,"j":22,"k":55,"m":83,"n":50,"o":60,"p":60,"q":55,"r":40,"s":55,"u":60,"v":55,"w":72,"x":55,"y":55,"z":55,"l":22,"t":28,"A":72,"B":71,"C":72,"D":72,"E":72,"F":72,"G":72,"H":72,"J":72,"K":73,"L":72,"M":83,"N":72,"O":72,"P":72,"Q":72,"R":72,"S":72,"T":72,"U":72,"V":72,"X":72,"Y":72,"Z":72,"I":33,"W":94," ":28,".":28,",":28,"-":33,"*":39,"&":66,"(":37,")":34,"=":55,"+":55,"/":28,"|":28,"@":100,":":28,"\"":30,"\'":20};
         this.RATE_PER_LINE = 24; 
     }
 
@@ -619,6 +660,10 @@ class IndianExpressCalculator {
     calculateBilledLines(adText) {
         if (!adText || adText.trim() === '') return 0;
         return Math.ceil(adText.length / this.RATE_PER_LINE);
+    }
+    calculateBilledWords(adText) {
+        const words = calculateWordBilledUnits(adText);
+        return Math.max(words, 20);
     }
 }
 
@@ -1332,6 +1377,266 @@ class PunyaNagariCalculator {
     }
 }
 
+
+class TribuneCalculator {
+    constructor(npId) {
+        this.npId = npId;
+    }
+    calculateBilledLines(adText) { return 0; }
+    calculateLayout(adText, boldWords = []) { return { linesCount: 0, layout: [] }; }
+    
+    calculateBilledWords(text) {
+        if (!text || text.trim() === '') return 0;
+        
+        let wordCount = 0;
+        let processedText = text;
+        
+        // 2. Handle dates formatted with dots
+        processedText = processedText.replace(/\b(\d{1,2})\.(\d{1,2})\.(\d{2,4})\b/g, '$1 $2 $3');
+        
+        // Mask Emails so they survive dot-splitting
+        processedText = processedText.replace(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g, function(match) {
+            return match.replace(/\./g, '__DOT__');
+        });
+
+        // Comma and Dot acts as a delimiter (forces split)
+        processedText = processedText.replace(/[,.]/g, ' ');
+
+        // Restore masked dots
+        processedText = processedText.replace(/__DOT__/g, '.');
+
+        // 3. Splitting & Tokenization (Standard logic)
+        processedText = processedText.replace(/[\/\-]/g, ' '); 
+        processedText = processedText.replace(/\s+/g, ' ').trim();
+        
+        const words = processedText.split(' ');
+
+        for (let word of words) {
+            // Punctuation Stripping (Standard logic)
+            const cleanWord = word.replace(/^[.,;:!?()]+|[.,;:!?()]+$/g, '');
+            if (cleanWord.length === 0) continue;
+            
+            const upperWord = cleanWord.toUpperCase();
+            
+            if (upperWord === 'SM4') {
+                wordCount += 3;
+            } else if (upperWord === 'PQM4') {
+                wordCount += 4;
+            } else if (upperWord === 'DOB' || upperWord === 'D.O.B') {
+                wordCount += 3;
+            } else if (/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$/.test(cleanWord)) {
+                wordCount += 4;
+            } else if (/^[+]?[0-9]{10,13}$/.test(cleanWord)) {
+                wordCount += 2;
+            } else {
+                // Calculated "as it is" - standard 1 word per token without 15-char limit penalty
+                wordCount += 1;
+            }
+        }
+        
+        return wordCount;
+    }
+}
+
+
+class IndianExpressGroupCalculator {
+    constructor(npId) {
+        this.npId = npId;
+    }
+    calculateBilledLines(adText) { return 0; }
+    calculateLayout(adText, boldWords = []) { return { linesCount: 0, layout: [] }; }
+    
+    calculateBilledWords(text) {
+        if (!text || text.trim() === '') return 0;
+        
+        let processedText = text;
+        
+        // Standard Date Handling
+        processedText = processedText.replace(/\b(\d{1,2})\.(\d{1,2})\.(\d{2,4})\b/g, '$1 $2 $3');
+        
+        // Mask dates like 10/05/2026 or 10-05-2026 so they are not split
+        processedText = processedText.replace(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/g, '$1__SEP__$2__SEP__$3');
+        
+        // Mask Emails so they survive dot-splitting
+        processedText = processedText.replace(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g, function(match) {
+            return match.replace(/\./g, '__DOT__');
+        });
+
+        // Comma and Dot acts as a delimiter (forces split)
+        processedText = processedText.replace(/[,.]/g, ' ');
+
+        // Restore masked dots
+        processedText = processedText.replace(/__DOT__/g, '.');
+
+        // 1. Splitting & Tokenization
+        processedText = processedText.replace(/[\/\-]/g, ' '); 
+        processedText = processedText.replace(/\s+/g, ' ').trim();
+        
+        // Restore masked dates
+        processedText = processedText.replace(/__SEP__/g, '/');
+        
+        const words = processedText.split(' ');
+        let wordCount = 0;
+
+        for (let word of words) {
+            // 2. Punctuation Stripping
+            const cleanWord = word.replace(/^[.,;:!?()]+|[.,;:!?()]+$/g, '');
+            if (cleanWord.length === 0) continue;
+            
+            if (/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$/.test(cleanWord)) {
+                wordCount += 3; // Emails are 3 words
+            } else if (/^[+]?[0-9]{10,13}$/.test(cleanWord)) {
+                wordCount += 2; // Mobile numbers are 2 words
+            } else {
+                // Normal words calculated as it is (1 word per token)
+                wordCount += 1;
+            }
+        }
+        
+        return wordCount;
+    }
+}
+
+
+// Word Calculator Limits Dictionary
+const WORD_LIMITS = {
+    'word_assamtribune': { min: 12, max: 100 },
+    'word_deccanchronicle': { min: 20, max: 50 },
+    'word_rajasthanpatrika': { min: 20, max: 50 },
+    'word_indianexpress': { min: 20, max: 50 },
+    'word_tribune': { min: 15, max: 100 },
+    'word_dainikbhaskar': { min: 20, max: 50 },
+    'word_amarujjala': { min: 25, max: 100 },
+    'word_gujaratsamachar': { min: 10, max: 50 },
+    'word_jansatta': { min: 20, max: 50 },
+    'word_aajkal': { min: 12, max: 100 }
+};
+
+
+
+class GujaratSamacharCalculator {
+    constructor(npId) {
+        this.npId = npId;
+    }
+    
+    calculateBilledLines(adText) { return 0; }
+    calculateLayout(adText, boldWords = []) { return { linesCount: 0, layout: [] }; }
+    
+    calculateBilledWords(text) {
+        if (!text || text.trim() === '') return 0;
+        
+        let processedText = text;
+        
+        // Standard Date Handling
+        processedText = processedText.replace(/\b(\d{1,2})\.(\d{1,2})\.(\d{2,4})\b/g, '$1 $2 $3');
+        
+        // Mask Emails so they survive dot-splitting
+        processedText = processedText.replace(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g, function(match) {
+            return match.replace(/\./g, '__DOT__');
+        });
+
+        // Comma and Dot acts as a delimiter (forces split)
+        processedText = processedText.replace(/[,.]/g, ' ');
+
+        // Restore masked dots
+        processedText = processedText.replace(/__DOT__/g, '.');
+
+        // 1. Splitting & Tokenization
+        processedText = processedText.replace(/[\/\-]/g, ' '); 
+        processedText = processedText.replace(/\s+/g, ' ').trim();
+        
+        const words = processedText.split(' ');
+        let wordCount = 0;
+
+        for (let word of words) {
+            // 2. Punctuation Stripping
+            const cleanWord = word.replace(/^[.,;:!?()]+|[.,;:!?()]+$/g, '');
+            if (cleanWord.length === 0) continue;
+            
+            if (/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$/.test(cleanWord)) {
+                wordCount += 8; // Emails are 8 words for Gujarat Samachar
+            } else if (/^[+]?[0-9]{10,13}$/.test(cleanWord)) {
+                wordCount += 2; // Mobile numbers are 2 words
+            } else {
+                // Normal words calculated as it is (1 word per token)
+                wordCount += 1;
+            }
+        }
+        
+        return wordCount;
+    }
+}
+
+
+class DainikBhaskarCalculator {
+    constructor(npId) {
+        this.npId = npId;
+    }
+    
+    calculateBilledLines(adText) { return 0; }
+    calculateLayout(adText, boldWords = []) { return { linesCount: 0, layout: [] }; }
+    
+    calculateBilledWords(text) {
+        if (!text || text.trim() === '') return 0;
+        
+        let processedText = text;
+        
+        // Standard Date Handling
+        processedText = processedText.replace(/\b(\d{1,2})\.(\d{1,2})\.(\d{2,4})\b/g, '$1 $2 $3');
+        
+        // Mask Emails so they survive dot-splitting
+        processedText = processedText.replace(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g, function(match) {
+            return match.replace(/\./g, '__DOT__');
+        });
+
+        // Comma and Dot acts as a delimiter (forces split)
+        processedText = processedText.replace(/[,.]/g, ' ');
+
+        // Restore masked dots
+        processedText = processedText.replace(/__DOT__/g, '.');
+
+        // 1. Splitting & Tokenization
+        processedText = processedText.replace(/[\/\-]/g, ' '); 
+        processedText = processedText.replace(/\s+/g, ' ').trim();
+        
+        const words = processedText.split(' ');
+        let wordCount = 0;
+
+        for (let word of words) {
+            // 2. Punctuation Stripping
+            const cleanWord = word.replace(/^[.,;:!?()]+|[.,;:!?()]+$/g, '');
+            if (cleanWord.length === 0) continue;
+            
+            const upperWord = cleanWord.toUpperCase();
+            
+            if (upperWord === 'DOB' || upperWord === 'D.O.B') {
+                wordCount += 3; // DOB is 3 words
+            } else if (/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$/.test(cleanWord)) {
+                wordCount += 3; // Emails are 3 words
+            } else if (/^[+]?[0-9]{10,13}$/.test(cleanWord)) {
+                wordCount += 2; // Mobile numbers are 2 words
+            } else {
+                // Normal words calculated as it is (1 word per token)
+                wordCount += 1;
+            }
+        }
+        
+        return wordCount;
+    }
+}
+
+class GenericWordCalculator {
+    constructor(npId) {
+        this.npId = npId;
+    }
+    calculateBilledLines(adText) { return 0; }
+    calculateLayout(adText, boldWords = []) { return { linesCount: 0, layout: [] }; }
+    calculateBilledWords(adText) {
+        const words = calculateWordBilledUnits(adText);
+        return words;
+    }
+}
+
 class ArthikLipiCalculator {
     constructor() {
         this.TOI_COLUMN_MAX_WIDTH = 1200; 
@@ -1440,6 +1745,10 @@ class ArthikLipiCalculator {
     calculateBilledLines(adText) {
         if (!adText || adText.trim() === '') return 0;
         return Math.ceil(adText.length / this.RATE_PER_LINE);
+    }
+    calculateBilledWords(adText) {
+        const words = calculateWordBilledUnits(adText);
+        return Math.max(words, 10);
     }
 }
 
@@ -1829,11 +2138,69 @@ function getEngine(newspaperId) {
         case 'pudhari': return new PudhariCalculator();
         case 'toi': 
         default: 
+            if (newspaperId === 'word_dainikbhaskar') return new DainikBhaskarCalculator(newspaperId);
+            if (newspaperId === 'word_gujaratsamachar') return new GujaratSamacharCalculator(newspaperId);
+            if (newspaperId === 'word_indianexpress' || newspaperId === 'word_jansatta' || newspaperId === 'word_aajkal') return new IndianExpressGroupCalculator(newspaperId);
+            if (newspaperId === 'word_tribune') return new TribuneCalculator(newspaperId);
+            if (newspaperId.startsWith('word_')) return new GenericWordCalculator(newspaperId);
             return new TimesOfIndiaLineCalculator();
     }
 }
 
 let engine = getEngine('toi');
+
+// Tab Logic
+let allNewspaperOptions = [];
+const tabLine = document.getElementById('tab-line');
+const tabWord = document.getElementById('tab-word');
+
+function switchTab(type) {
+    if (allNewspaperOptions.length === 0) {
+        allNewspaperOptions = Array.from(newspaperSelect.options);
+    }
+
+    tabLine.classList.remove('active');
+    tabWord.classList.remove('active');
+    
+    if (type === 'line') {
+        tabLine.classList.add('active');
+    } else {
+        tabWord.classList.add('active');
+    }
+    
+    // Filter dropdown options
+    newspaperSelect.innerHTML = '';
+    allNewspaperOptions.forEach(opt => {
+        if (opt.getAttribute('data-type') === type) {
+            newspaperSelect.appendChild(opt);
+        }
+    });
+    
+    // Select the first available option in the new tab and trigger engine update
+    newspaperSelect.selectedIndex = 0;
+    engine = getEngine(newspaperSelect.value);
+    
+    // Update main titles
+    const mainTitle = document.querySelector('header h1');
+    if (mainTitle) {
+        if (type === 'word') {
+            mainTitle.innerText = "Word Calculator";
+            document.querySelector('header p').innerText = "Classified Ad Word Calculator";
+        } else {
+            mainTitle.innerText = "Line Calculator";
+            document.querySelector('header p').innerText = "Classified Ad Line Visualizer & Calculator";
+        }
+    }
+
+    updateVisualizer();
+}
+
+tabLine.addEventListener('click', () => switchTab('line'));
+tabWord.addEventListener('click', () => switchTab('word'));
+
+// Initialize tabs on load
+setTimeout(() => switchTab('line'), 100);
+
 
 // Event Listeners
     adTextInput.addEventListener('input', (e) => {
@@ -1907,7 +2274,7 @@ newspaperSelect.addEventListener('change', (e) => {
         'sakshi': '#1d4ed8'    // Sakshi Blue
     };
     
-    columnHeader.innerText = names[e.target.value];
+    columnHeader.innerText = names[e.target.value] || e.target.options[e.target.selectedIndex].text;
     document.documentElement.style.setProperty('--header-color', colors[e.target.value] || '#ef4444');
     billedLinesSubtitle.innerText = `Based on ${engine.RATE_PER_LINE} chars/line`;
     
@@ -2046,33 +2413,79 @@ function updateVisualizer() {
     const boldWordsString = boldWordsInput.value;
     let boldWords = boldWordsString.split(',').map(w => w.trim()).filter(w => w !== '');
 
+    // UPDATE UI TITLES IMMEDIATELY (even if text is empty)
+    const billedTitle = document.getElementById('billedUnitTitle');
+    const billedSubtitle = document.getElementById('billedUnitSubtitle');
+    const billedCard = document.getElementById('billedCard');
+    const physicalLinesCard = document.getElementById('physicalLinesCard');
+    const visualizerPanel = document.querySelector('.visualizer-panel');
+    const gridLayout = document.querySelector('.grid-layout');
+    
+    if (typeof engine.calculateBilledWords === 'function') {
+        if (visualizerPanel) visualizerPanel.style.display = 'none';
+        
+        // Handle Maximum Limits
+        const wordLimitWarning = document.getElementById('wordLimitWarning');
+        const limits = typeof WORD_LIMITS !== 'undefined' && WORD_LIMITS[newspaperSelect.value];
+        const actualWords = engine.calculateBilledWords(text); // This correctly computes actual since it enforces min
+        
+        // Wait, calculateBilledWords enforces the min mathematically. 
+        // We need to check if the RAW wordCount exceeded the max. Or just if the returned actualWords > max.
+        if (wordLimitWarning && limits) {
+            if (actualWords > limits.max) {
+                wordLimitWarning.style.display = 'block';
+                wordLimitWarning.innerText = `⚠️ Exceeds maximum limit of ${limits.max} words (Currently: ${actualWords})`;
+                billedLinesStat.style.color = '#dc2626'; // Turn red
+            } else {
+                wordLimitWarning.style.display = 'none';
+                billedLinesStat.style.color = ''; // Reset
+            }
+        }
+        if (gridLayout) {
+            // Optional: center the input panel by changing grid to 1fr or centering
+            // Setting grid template to 1fr makes it full width. If we want it centered, we can use margin.
+            // Let's just set it to 1fr so the editor expands nicely or centers.
+            gridLayout.style.gridTemplateColumns = '1fr';
+            gridLayout.style.maxWidth = '800px';
+            gridLayout.style.margin = '0 auto';
+        }
+        if (billedTitle) billedTitle.innerText = "Billed Words";
+        if (billedSubtitle) {
+            billedSubtitle.innerText = "Calculated by exact word count";
+        }
+        if (billedCard) billedCard.style.display = ''; // Show billed words card
+        if (physicalLinesCard) physicalLinesCard.style.display = 'none'; // Hide physical lines for word calculator
+    } else {
+        if (billedTitle) billedTitle.innerText = "Billed Lines";
+        if (billedSubtitle) billedSubtitle.innerText = "Based on 24 chars/line";
+        const wordLimitWarning = document.getElementById('wordLimitWarning');
+        if (wordLimitWarning) wordLimitWarning.style.display = 'none';
+        billedLinesStat.style.color = ''; // Reset
+        if (billedCard) billedCard.style.display = 'none'; // Hide billed card in line calculator tab
+        if (physicalLinesCard) physicalLinesCard.style.display = ''; // Show physical lines for line calculator
+        if (visualizerPanel) visualizerPanel.style.display = ''; // Show visualizer
+        if (gridLayout) {
+            gridLayout.style.gridTemplateColumns = '1fr 1fr';
+            gridLayout.style.maxWidth = 'none';
+            gridLayout.style.margin = '';
+        }
+    }
+
     if (text.trim().length > 0) {
         const textWords = text.trim().split(/\s+/);
         const firstWord = textWords[0].replace(/[.,()":|+&\/-]/g, '');
-        
-        // Always bold the first word, except for Pudhari and IE North
-        if (newspaperSelect.value !== 'pudhari' && newspaperSelect.value !== 'ie_north') {
+
+        const intrinsicBolding = ['toi', 'hindu', 'ht', 'et', 'mirror'];
+
+        // Only auto-bold the first word if no custom bold words are provided, 
+        // AND the calculator doesn't already do it inherently,
+        // AND it's not a newspaper that explicitly suppresses it (Pudhari, IE North).
+        if (boldWordsString.trim() === '' && 
+            !intrinsicBolding.includes(newspaperSelect.value) && 
+            newspaperSelect.value !== 'pudhari' && 
+            newspaperSelect.value !== 'ie_north') {
             if (!boldWords.includes(firstWord) && !boldWords.includes(textWords[0])) {
                 boldWords.push(firstWord);
-            }
-        }
-        
-        // If input is empty, auto-detect subsequent ALL CAPS words
-        if (boldWordsString.trim() === '') {
-            let upperCount = 0;
-            for (let w of textWords) {
-                if (w === w.toUpperCase() && w.match(/[A-Z]/)) upperCount++;
-            }
-            
-            if (upperCount < textWords.length * 0.5) { 
-                for(let i = 1; i < Math.min(textWords.length, 6); i++) { 
-                    let clean = textWords[i].replace(/[.,()":|+&\/-]/g, '');
-                    if (clean.length > 0 && clean === clean.toUpperCase() && clean.match(/[A-Z]/)) {
-                        boldWords.push(clean);
-                    } else {
-                        break; 
-                    }
-                }
             }
         }
     }
@@ -2162,11 +2575,17 @@ function updateVisualizer() {
 
     // Calculate
     const layoutData = engine.calculateLayout(text, boldWords);
-    const billedLines = engine.calculateBilledLines(text, boldWords);
+    
+    let billedUnits = 0;
+    if (typeof engine.calculateBilledWords === 'function') {
+        billedUnits = engine.calculateBilledWords(text);
+    } else {
+        billedUnits = engine.calculateBilledLines(text, boldWords);
+    }
 
     // Update Stats
     animateValue(physicalLinesStat, parseInt(physicalLinesStat.innerText) || 0, layoutData.linesCount, 300);
-    animateValue(billedLinesStat, parseInt(billedLinesStat.innerText) || 0, billedLines, 300);
+    animateValue(billedLinesStat, parseInt(billedLinesStat.innerText) || 0, billedUnits, 300);
 
     // Render Layout
     renderLayout(layoutData.layout);

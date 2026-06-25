@@ -14,7 +14,14 @@
             <p>Classified Ad Line Visualizer & Calculator</p>
         </header>
 
+        
+        <div class="calculator-tabs">
+            <button id="tab-line" class="tab-btn active">Line Calculator</button>
+            <button id="tab-word" class="tab-btn">Word Calculator</button>
+        </div>
+
         <main class="grid-layout">
+
             <!-- Left Panel: Input -->
             <section class="panel input-panel">
                 <h2>Ad Matter Editor</h2>
@@ -22,25 +29,33 @@
                 <div class="form-group">
                     <label for="newspaperSelect">Select Newspaper</label>
                     <select id="newspaperSelect" class="newspaper-dropdown">
-                        <option value="toi">Times of India</option>
-                        <option value="et">Economic Times</option>
-                        <option value="mt">Maharashtra Times</option>
-                        <option value="mirror">Mirror</option>
-                        <option value="ie">The Indian Express (Gujarat/Narrow)</option>
-                        <option value="ie_north">The Indian Express (Delhi/North)</option>
-                        <option value="hindu">The Hindu</option>
-                        <option value="ht">Hindustan Times</option>
-                        <option value="lokmat">Lokmat Times</option>
-                        <option value="telangana">Telangana Today</option>
-                        <option value="navgujarat">Nav Gujarat Samay</option>
-                        <option value="eenadu">Eenadu</option>
-                        <option value="sakshi">Sakshi</option>
-                        <option value="yashobhumi">Yashobhumi</option>
-                        <option value="mumbaichoufer">Mumbai Choufer</option>
-                        <option value="punyanagari">Punya Nagari</option>
-                        <option value="arthiklipi">Arthik Lipi</option>
-                        <option value="namasthetelangana">Namasthe Telangana</option>
-                        <option value="pudhari">Pudhari</option>
+                        <option value="toi" data-type="line">Times of India</option>
+                        <option value="et" data-type="line">Economic Times</option>
+                        <option value="mt" data-type="line">Maharashtra Times</option>
+                        <option value="mirror" data-type="line">Mirror</option>
+                        <option value="hindu" data-type="line">The Hindu</option>
+                        <option value="ht" data-type="line">Hindustan Times</option>
+                        <option value="lokmat" data-type="line">Lokmat Times</option>
+                        <option value="telangana" data-type="line">Telangana Today</option>
+                        <option value="navgujarat" data-type="line">Nav Gujarat Samay</option>
+                        <option value="eenadu" data-type="line">Eenadu</option>
+                        <option value="sakshi" data-type="line">Sakshi</option>
+                        <option value="yashobhumi" data-type="line">Yashobhumi</option>
+                        <option value="mumbaichoufer" data-type="line">Mumbai Choufer</option>
+                        <option value="punyanagari" data-type="line">Punya Nagari</option>
+                        <option value="namasthetelangana" data-type="line">Namasthe Telangana</option>
+                        <option value="pudhari" data-type="line">Pudhari</option>
+                    
+                        <option value="word_tribune" data-type="word">Tribune</option>
+                        <option value="word_indianexpress" data-type="word">Indian Express</option>
+                        <option value="word_gujaratsamachar" data-type="word">Gujarat Samachar</option>
+                        <option value="word_rajasthanpatrika" data-type="word">Rajasthan Patrika</option>
+                        <option value="word_amarujjala" data-type="word">Amar Ujjala</option>
+                        <option value="word_dainikbhaskar" data-type="word">Dainik Bhaskar</option>
+                        <option value="word_deccanchronicle" data-type="word">Deccan Chronicle</option>
+                        <option value="word_jansatta" data-type="word">JanSatta</option>
+                        <option value="word_assamtribune" data-type="word">Assam Tribune</option>
+                        <option value="word_aajkal" data-type="word">Aajkal</option>
                     </select>
                 </div>
 
@@ -55,15 +70,15 @@
                 </div>
 
                 <div class="stats-dashboard">
-                    <div class="stat-card primary">
+                    <div class="stat-card primary" id="physicalLinesCard">
                         <h3>Printed Lines</h3>
                         <div class="stat-value" id="physicalLinesStat">0</div>
                         <div class="stat-subtitle">Estimated physical layout</div>
                     </div>
-                    <div class="stat-card secondary">
-                        <h3>Billed Lines</h3>
+                    <div class="stat-card secondary" id="billedCard">
+                        <h3 id="billedUnitTitle">Billed Lines</h3>
                         <div class="stat-value" id="billedLinesStat">0</div>
-                        <div class="stat-subtitle">Based on 24 chars/line</div>
+                        <div class="stat-subtitle" id="billedUnitSubtitle">Based on 24 chars/line</div>
                     </div>
                 </div>
             </section>

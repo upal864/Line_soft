@@ -18,3 +18,7 @@ venv.bak/
 
 # Dependency directories
 node_modules/
+
+# Scratch & Samples
+scratch/
+samples/
