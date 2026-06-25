@@ -39,6 +39,7 @@ graph TD
     ENG --> IE
     ENG --> TH
     ENG --> HT
+    ENG -.-> ETC[...and 15+ more \n Regional Papers]
 
     ENG -->|Calculates Physical Layout & Billed Units| API
     API -->|HTTP JSON Response| PHP
